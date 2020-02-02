@@ -5,9 +5,9 @@ using System.Text;
 using System.Security.Cryptography;
 using System.IO;
 using System.Net;
-namespace Tencent
+namespace WxWorkLib.Tencent
 {
-    class Cryptography
+    public class Cryptography
     {
         public static UInt32 HostToNetworkOrder(UInt32 inval)
         {

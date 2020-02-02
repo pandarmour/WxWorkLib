@@ -6,6 +6,7 @@
     <PackageProjectUrl>https://github.com/pandarmour/WxWorkLib</PackageProjectUrl>
     <Authors>pandarmour</Authors>
     <Company />
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
