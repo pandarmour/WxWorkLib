@@ -1,21 +1,22 @@
 ﻿using Newtonsoft.Json;
-using WxWorkLib.Models;
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Reflection;
 using System.Text;
+using WxWorkLib.Base;
 
 namespace WxWorkLib
 {
-    public class WxWorkClient
+    public partial class WxWorkClient
     {
-        public static Dictionary<int, TokenCacheModel> TokenCache = new Dictionary<int, TokenCacheModel>();
+        public static Dictionary<string, TokenCacheModel> TokenCache = new Dictionary<string, TokenCacheModel>();
 
         public string CorpId { get; set; }
-        public int AgentId { get; set; }
+        public string AgentId { get; set; }
         public string AgentSecret { get; set; }
 
-        public WxWorkClient(string corpId, int agentId, string agentSecret)
+        public WxWorkClient(string corpId, string agentId, string agentSecret)
         {
             this.CorpId = corpId;
             this.AgentId = agentId;
@@ -24,7 +25,7 @@ namespace WxWorkLib
 
         public TokenCacheModel GetToken()
         {
-            TokenCacheModel cache = TokenCache.ContainsKey(AgentId) ? TokenCache[AgentId] :  null;
+            TokenCacheModel cache = TokenCache.ContainsKey(AgentId) ? TokenCache[AgentId] : null;
             if (cache != null && DateTime.Now < cache.ExpiresAt)
             {
                 return cache;
@@ -48,18 +49,41 @@ namespace WxWorkLib
             }
         }
 
-        public void SendMessage<T>(T data)
+        public string GetAddress(string module, string action, object @params)
         {
             var tokenCache = GetToken();
             string accessToken = tokenCache.AccessToken;
+            string address = $"https://qyapi.weixin.qq.com/cgi-bin/{module}/{action}?access_token={accessToken}";
+            if (@params != null)
+                foreach (PropertyInfo p in @params.GetType().GetProperties())
+                {
+                    address = $"{address}&{p.Name}={p.GetValue(@params)}";
+                }
+            Console.WriteLine(address);
+            return address;
+        }
 
-            string json = JsonConvert.SerializeObject(data);
-            byte[] bytes = Encoding.UTF8.GetBytes(json);
-
+        public T HttpGet<T>(GenericHttpGetRequestModel req)
+        {
+            string address = GetAddress(req.Module, req.Action, req.Params);
             using (var webClient = new WebClient())
             {
-                var address = $"https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={accessToken}";
+                var result = webClient.DownloadString(address);
+                return JsonConvert.DeserializeObject<T>(result);
+            }
+        }
+
+        public T HttpPost<T>(GenericHttpPostRequestModel req)
+        {
+            string address = GetAddress(req.Module, req.Action, req.Params);
+
+            string json = JsonConvert.SerializeObject(req.Data);
+            byte[] bytes = Encoding.UTF8.GetBytes(json);
+            using (var webClient = new WebClient())
+            {
                 var result = webClient.UploadData(address, bytes);
+                string text = Encoding.UTF8.GetString(result);
+                return JsonConvert.DeserializeObject<T>(text);
             }
         }
     }
